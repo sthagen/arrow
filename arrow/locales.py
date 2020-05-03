@@ -22,6 +22,21 @@ def get_locale(name):
     return locale_cls()
 
 
+def get_locale_by_class_name(name):
+    """Returns an appropriate :class:`Locale <arrow.locales.Locale>`
+    corresponding to an locale class name.
+
+    :param name: the name of the locale class.
+
+    """
+    locale_cls = globals().get(name)
+
+    if locale_cls is None:
+        raise ValueError("Unsupported locale '{}'".format(name))
+
+    return locale_cls()
+
+
 # base locale type.
 
 
@@ -893,17 +908,20 @@ class ChineseTWLocale(Locale):
 
     past = "{0}前"
     future = "{0}後"
+    and_word = "和"
 
     timeframes = {
         "now": "剛才",
-        "second": "一秒",
-        "seconds": "{0}幾秒",
+        "second": "1秒",
+        "seconds": "{0}秒",
         "minute": "1分鐘",
         "minutes": "{0}分鐘",
         "hour": "1小時",
         "hours": "{0}小時",
         "day": "1天",
         "days": "{0}天",
+        "week": "1週",
+        "weeks": "{0}週",
         "month": "1個月",
         "months": "{0}個月",
         "year": "1年",
@@ -941,7 +959,7 @@ class ChineseTWLocale(Locale):
         "12",
     ]
 
-    day_names = ["", "周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    day_names = ["", "週一", "週二", "週三", "週四", "週五", "週六", "週日"]
     day_abbreviations = ["", "一", "二", "三", "四", "五", "六", "日"]
 
 
@@ -1227,20 +1245,24 @@ class PolishLocale(SlavicBaseLocale):
     past = "{0} temu"
     future = "za {0}"
 
+    # The nouns should be in genitive case (Polish: "dopełniacz")
+    # in order to correctly form `past` & `future` expressions.
     timeframes = {
         "now": "teraz",
-        "second": "sekunda",
-        "seconds": "{0} kilka sekund",
+        "second": "sekundę",
+        "seconds": ["{0} sekund", "{0} sekundy", "{0} sekund"],
         "minute": "minutę",
         "minutes": ["{0} minut", "{0} minuty", "{0} minut"],
-        "hour": "godzina",
+        "hour": "godzinę",
         "hours": ["{0} godzin", "{0} godziny", "{0} godzin"],
         "day": "dzień",
-        "days": ["{0} dzień", "{0} dni", "{0} dni"],
+        "days": "{0} dni",
+        "week": "tydzień",
+        "weeks": ["{0} tygodni", "{0} tygodnie", "{0} tygodni"],
         "month": "miesiąc",
-        "months": ["{0} miesiąc", "{0} miesiące", "{0} miesięcy"],
+        "months": ["{0} miesięcy", "{0} miesiące", "{0} miesięcy"],
         "year": "rok",
-        "years": ["{0} rok", "{0} lata", "{0} lat"],
+        "years": ["{0} lat", "{0} lata", "{0} lat"],
     }
 
     month_names = [
@@ -1634,7 +1656,7 @@ class MacedonianLocale(SlavicBaseLocale):
     ]
 
 
-class DeutschBaseLocale(Locale):
+class GermanBaseLocale(Locale):
 
     past = "vor {0}"
     future = "in {0}"
@@ -1650,6 +1672,8 @@ class DeutschBaseLocale(Locale):
         "hours": "{0} Stunden",
         "day": "einem Tag",
         "days": "{0} Tagen",
+        "week": "einer Woche",
+        "weeks": "{0} Wochen",
         "month": "einem Monat",
         "months": "{0} Monaten",
         "year": "einem Jahr",
@@ -1660,6 +1684,7 @@ class DeutschBaseLocale(Locale):
     timeframes_only_distance["minute"] = "eine Minute"
     timeframes_only_distance["hour"] = "eine Stunde"
     timeframes_only_distance["day"] = "ein Tag"
+    timeframes_only_distance["week"] = "eine Woche"
     timeframes_only_distance["month"] = "ein Monat"
     timeframes_only_distance["year"] = "ein Jahr"
 
@@ -1719,21 +1744,28 @@ class DeutschBaseLocale(Locale):
         :param only_distance: return only distance eg: "11 seconds" without "in" or "ago" keywords
         """
 
-        humanized = self.timeframes_only_distance[timeframe].format(trunc(abs(delta)))
-
         if not only_distance:
-            humanized = self._format_timeframe(timeframe, delta)
-            humanized = self._format_relative(humanized, timeframe, delta)
+            return super(GermanBaseLocale, self).describe(
+                timeframe, delta, only_distance
+            )
+
+        # German uses a different case without 'in' or 'ago'
+        humanized = self.timeframes_only_distance[timeframe].format(trunc(abs(delta)))
 
         return humanized
 
 
-class GermanLocale(DeutschBaseLocale, Locale):
+class GermanLocale(GermanBaseLocale, Locale):
 
     names = ["de", "de_de"]
 
 
-class AustrianLocale(DeutschBaseLocale, Locale):
+class SwissLocale(GermanBaseLocale, Locale):
+
+    names = ["de_ch"]
+
+
+class AustrianLocale(GermanBaseLocale, Locale):
 
     names = ["de_at"]
 
@@ -3748,77 +3780,6 @@ class RomanshLocale(Locale):
     ]
 
     day_abbreviations = ["", "gli", "ma", "me", "gie", "ve", "so", "du"]
-
-
-class SwissLocale(Locale):
-
-    names = ["de", "de_ch"]
-
-    past = "vor {0}"
-    future = "in {0}"
-
-    timeframes = {
-        "now": "gerade eben",
-        "second": "eine Sekunde",
-        "seconds": "{0} Sekunden",
-        "minute": "einer Minute",
-        "minutes": "{0} Minuten",
-        "hour": "einer Stunde",
-        "hours": "{0} Stunden",
-        "day": "einem Tag",
-        "days": "{0} Tagen",
-        "week": "einer Woche",
-        "weeks": "{0} Wochen",
-        "month": "einem Monat",
-        "months": "{0} Monaten",
-        "year": "einem Jahr",
-        "years": "{0} Jahren",
-    }
-
-    month_names = [
-        "",
-        "Januar",
-        "Februar",
-        "März",
-        "April",
-        "Mai",
-        "Juni",
-        "Juli",
-        "August",
-        "September",
-        "Oktober",
-        "November",
-        "Dezember",
-    ]
-
-    month_abbreviations = [
-        "",
-        "Jan",
-        "Feb",
-        "Mär",
-        "Apr",
-        "Mai",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Okt",
-        "Nov",
-        "Dez",
-    ]
-
-    day_names = [
-        "",
-        "Montag",
-        "Dienstag",
-        "Mittwoch",
-        "Donnerstag",
-        "Freitag",
-        "Samstag",
-        "Sonntag",
-    ]
-
-    day_abbreviations = ["", "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
 
 class RomanianLocale(Locale):

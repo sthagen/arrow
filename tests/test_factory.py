@@ -2,21 +2,16 @@
 import time
 from datetime import date, datetime
 
-import dateparser
 import pytest
 from dateutil import tz
 
-from arrow import factory
 from arrow.parser import ParserError
 
 from .utils import assert_datetime_equality
 
 
+@pytest.mark.usefixtures("arrow_factory")
 class TestGet:
-    @classmethod
-    def setup_class(cls):
-        cls.factory = factory.ArrowFactory()
-
     def test_no_args(self):
 
         assert_datetime_equality(
@@ -117,6 +112,7 @@ class TestGet:
 
     # regression test for issue #658
     def test_one_arg_dateparser_datetime(self):
+        dateparser = pytest.importorskip("dateparser")
         expected = datetime(1990, 1, 1).replace(tzinfo=tz.tzutc())
         # dateparser outputs: datetime.datetime(1990, 1, 1, 0, 0, tzinfo=<StaticTzInfo 'UTC\+00:00'>)
         parsed_date = dateparser.parse("1990-01-01T00:00:00+00:00")
@@ -333,11 +329,8 @@ class TestGet:
         assert res.tzinfo == tz.gettz("Asia/Tokyo")
 
 
+@pytest.mark.usefixtures("arrow_factory")
 class TestUtcNow:
-    @classmethod
-    def setup_class(cls):
-        cls.factory = factory.ArrowFactory()
-
     def test_utcnow(self):
 
         assert_datetime_equality(
@@ -346,11 +339,8 @@ class TestUtcNow:
         )
 
 
+@pytest.mark.usefixtures("arrow_factory")
 class TestNow:
-    @classmethod
-    def setup_class(cls):
-        cls.factory = factory.ArrowFactory()
-
     def test_no_tz(self):
 
         assert_datetime_equality(self.factory.now(), datetime.now(tz.tzlocal()))

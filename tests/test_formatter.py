@@ -1,20 +1,15 @@
 # -*- coding: utf-8 -*-
-import time
 from datetime import datetime
 
+import pytest
 import pytz
 from dateutil import tz as dateutil_tz
-
-from arrow import formatter
 
 from .utils import make_full_tz_list
 
 
+@pytest.mark.usefixtures("arrow_formatter")
 class TestDateTimeFormatterFormatToken:
-    @classmethod
-    def setup_class(cls):
-        cls.formatter = formatter.DateTimeFormatter()
-
     def test_format(self):
 
         dt = datetime(2013, 2, 5, 12, 32, 51)
@@ -105,13 +100,15 @@ class TestDateTimeFormatterFormatToken:
 
     def test_timestamp(self):
 
-        timestamp = time.time()
+        timestamp = 1588437009.8952794
         dt = datetime.utcfromtimestamp(timestamp)
-        assert self.formatter._format_token(dt, "X") == str(int(timestamp))
+        expected = str(int(timestamp))
+        assert self.formatter._format_token(dt, "X") == expected
 
-        # time.time() may return a float with greater than 6 digits of precision
-        rounded_ts = str(round(timestamp * 1000000))
-        assert self.formatter._format_token(dt, "x") == rounded_ts.format("{f}")
+        # Must round because time.time() may return a float with greater
+        # than 6 digits of precision
+        expected = str(int(timestamp * 1000000))
+        assert self.formatter._format_token(dt, "x") == expected
 
     def test_timezone(self):
 

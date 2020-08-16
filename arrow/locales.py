@@ -478,8 +478,8 @@ class SpanishLocale(Locale):
         return "{}º".format(n)
 
 
-class FrenchLocale(Locale):
-    names = ["fr", "fr_fr"]
+class FrenchBaseLocale(Locale):
+
     past = "il y a {0}"
     future = "dans {0}"
     and_word = "et"
@@ -517,21 +517,6 @@ class FrenchLocale(Locale):
         "novembre",
         "décembre",
     ]
-    month_abbreviations = [
-        "",
-        "janv",
-        "févr",
-        "mars",
-        "avr",
-        "mai",
-        "juin",
-        "juil",
-        "août",
-        "sept",
-        "oct",
-        "nov",
-        "déc",
-    ]
 
     day_names = [
         "",
@@ -553,6 +538,48 @@ class FrenchLocale(Locale):
         if abs(n) == 1:
             return "{}er".format(n)
         return "{}e".format(n)
+
+
+class FrenchLocale(FrenchBaseLocale, Locale):
+
+    names = ["fr", "fr_fr"]
+
+    month_abbreviations = [
+        "",
+        "janv",
+        "févr",
+        "mars",
+        "avr",
+        "mai",
+        "juin",
+        "juil",
+        "août",
+        "sept",
+        "oct",
+        "nov",
+        "déc",
+    ]
+
+
+class FrenchCanadianLocale(FrenchBaseLocale, Locale):
+
+    names = ["fr_ca"]
+
+    month_abbreviations = [
+        "",
+        "janv",
+        "févr",
+        "mars",
+        "avr",
+        "mai",
+        "juin",
+        "juill",
+        "août",
+        "sept",
+        "oct",
+        "nov",
+        "déc",
+    ]
 
 
 class GreekLocale(Locale):
@@ -701,6 +728,8 @@ class SwedishLocale(Locale):
         "hours": "{0} timmar",
         "day": "en dag",
         "days": "{0} dagar",
+        "week": "en vecka",
+        "weeks": "{0} veckor",
         "month": "en månad",
         "months": "{0} månader",
         "year": "ett år",
@@ -1032,19 +1061,33 @@ class KoreanLocale(Locale):
 
     timeframes = {
         "now": "지금",
-        "second": "두 번째",
-        "seconds": "{0}몇 초",
+        "second": "1초",
+        "seconds": "{0}초",
         "minute": "1분",
         "minutes": "{0}분",
-        "hour": "1시간",
+        "hour": "한시간",
         "hours": "{0}시간",
-        "day": "1일",
+        "day": "하루",
         "days": "{0}일",
-        "month": "1개월",
+        "week": "1주",
+        "weeks": "{0}주",
+        "month": "한달",
         "months": "{0}개월",
         "year": "1년",
         "years": "{0}년",
     }
+
+    special_dayframes = {
+        -3: "그끄제",
+        -2: "그제",
+        -1: "어제",
+        1: "내일",
+        2: "모레",
+        3: "글피",
+        4: "그글피",
+    }
+
+    special_yearframes = {-2: "제작년", -1: "작년", 1: "내년", 2: "내후년"}
 
     month_names = [
         "",
@@ -1079,6 +1122,24 @@ class KoreanLocale(Locale):
 
     day_names = ["", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
     day_abbreviations = ["", "월", "화", "수", "목", "금", "토", "일"]
+
+    def _ordinal_number(self, n):
+        ordinals = ["0", "첫", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉", "열"]
+        if n < len(ordinals):
+            return "{}번째".format(ordinals[n])
+        return "{}번째".format(n)
+
+    def _format_relative(self, humanized, timeframe, delta):
+        if timeframe in ("day", "days"):
+            special = self.special_dayframes.get(delta)
+            if special:
+                return special
+        elif timeframe in ("year", "years"):
+            special = self.special_yearframes.get(delta)
+            if special:
+                return special
+
+        return super(KoreanLocale, self)._format_relative(humanized, timeframe, delta)
 
 
 # derived locale types & implementations.
@@ -1587,14 +1648,16 @@ class MacedonianLocale(SlavicBaseLocale):
 
     timeframes = {
         "now": "сега",
-        "second": "секунда",
-        "seconds": "{0} секунди",
+        "second": "една секунда",
+        "seconds": ["{0} секунда", "{0} секунди", "{0} секунди"],
         "minute": "една минута",
         "minutes": ["{0} минута", "{0} минути", "{0} минути"],
         "hour": "еден саат",
         "hours": ["{0} саат", "{0} саати", "{0} саати"],
         "day": "еден ден",
         "days": ["{0} ден", "{0} дена", "{0} дена"],
+        "week": "една недела",
+        "weeks": ["{0} недела", "{0} недели", "{0} недели"],
         "month": "еден месец",
         "months": ["{0} месец", "{0} месеци", "{0} месеци"],
         "year": "една година",
@@ -1620,39 +1683,39 @@ class MacedonianLocale(SlavicBaseLocale):
     ]
     month_abbreviations = [
         "",
-        "Јан.",
-        " Фев.",
-        " Мар.",
-        " Апр.",
-        " Мај",
-        " Јун.",
-        " Јул.",
-        " Авг.",
-        " Септ.",
-        " Окт.",
-        " Ноем.",
-        " Декем.",
+        "Јан",
+        "Фев",
+        "Мар",
+        "Апр",
+        "Мај",
+        "Јун",
+        "Јул",
+        "Авг",
+        "Септ",
+        "Окт",
+        "Ноем",
+        "Декем",
     ]
 
     day_names = [
         "",
         "Понеделник",
-        " Вторник",
-        " Среда",
-        " Четврток",
-        " Петок",
-        " Сабота",
-        " Недела",
+        "Вторник",
+        "Среда",
+        "Четврток",
+        "Петок",
+        "Сабота",
+        "Недела",
     ]
     day_abbreviations = [
         "",
-        "Пон.",
-        " Вт.",
-        " Сре.",
-        " Чет.",
-        " Пет.",
-        " Саб.",
-        " Нед.",
+        "Пон",
+        "Вт",
+        "Сре",
+        "Чет",
+        "Пет",
+        "Саб",
+        "Нед",
     ]
 
 
@@ -1947,75 +2010,6 @@ class PortugueseLocale(Locale):
 
     month_names = [
         "",
-        "janeiro",
-        "fevereiro",
-        "março",
-        "abril",
-        "maio",
-        "junho",
-        "julho",
-        "agosto",
-        "setembro",
-        "outubro",
-        "novembro",
-        "dezembro",
-    ]
-    month_abbreviations = [
-        "",
-        "jan",
-        "fev",
-        "mar",
-        "abr",
-        "maio",
-        "jun",
-        "jul",
-        "ago",
-        "set",
-        "out",
-        "nov",
-        "dez",
-    ]
-
-    day_names = [
-        "",
-        "segunda-feira",
-        "terça-feira",
-        "quarta-feira",
-        "quinta-feira",
-        "sexta-feira",
-        "sábado",
-        "domingo",
-    ]
-    day_abbreviations = ["", "seg", "ter", "qua", "qui", "sex", "sab", "dom"]
-
-
-class BrazilianPortugueseLocale(PortugueseLocale):
-    names = ["pt_br"]
-
-    past = "faz {0}"
-
-    future = "em {0}"
-
-    timeframes = {
-        "now": "agora",
-        "second": "um segundo",
-        "seconds": "{0} segundos",
-        "minute": "um minuto",
-        "minutes": "{0} minutos",
-        "hour": "uma hora",
-        "hours": "{0} horas",
-        "day": "um dia",
-        "days": "{0} dias",
-        "week": "uma semana",
-        "weeks": "{0} semanas",
-        "month": "um mês",
-        "months": "{0} meses",
-        "year": "um ano",
-        "years": "{0} anos",
-    }
-
-    month_names = [
-        "",
         "Janeiro",
         "Fevereiro",
         "Março",
@@ -2056,6 +2050,12 @@ class BrazilianPortugueseLocale(PortugueseLocale):
         "Domingo",
     ]
     day_abbreviations = ["", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"]
+
+
+class BrazilianPortugueseLocale(PortugueseLocale):
+    names = ["pt_br"]
+
+    past = "faz {0}"
 
 
 class TagalogLocale(Locale):
@@ -2867,6 +2867,8 @@ class CzechLocale(Locale):
         "hours": {"past": "{0} hodinami", "future": ["{0} hodiny", "{0} hodin"]},
         "day": {"past": "dnem", "future": "den", "zero": "{0} dnů"},
         "days": {"past": "{0} dny", "future": ["{0} dny", "{0} dnů"]},
+        "week": {"past": "týdnem", "future": "týden", "zero": "{0} týdnů"},
+        "weeks": {"past": "{0} týdny", "future": ["{0} týdny", "{0} týdnů"]},
         "month": {"past": "měsícem", "future": "měsíc", "zero": "{0} měsíců"},
         "months": {"past": "{0} měsíci", "future": ["{0} měsíce", "{0} měsíců"]},
         "year": {"past": "rokem", "future": "rok", "zero": "{0} let"},
@@ -2946,14 +2948,16 @@ class SlovakLocale(Locale):
 
     timeframes = {
         "now": "Teraz",
-        "second": {"past": "druhý", "future": "druhý", "zero": "druhý"},
-        "seconds": {"past": "pár sekundami", "future": ["{0} sekundy", "{0} sekúnd"]},
+        "second": {"past": "sekundou", "future": "sekundu", "zero": "{0} sekúnd"},
+        "seconds": {"past": "{0} sekundami", "future": ["{0} sekundy", "{0} sekúnd"]},
         "minute": {"past": "minútou", "future": "minútu", "zero": "{0} minút"},
         "minutes": {"past": "{0} minútami", "future": ["{0} minúty", "{0} minút"]},
         "hour": {"past": "hodinou", "future": "hodinu", "zero": "{0} hodín"},
         "hours": {"past": "{0} hodinami", "future": ["{0} hodiny", "{0} hodín"]},
         "day": {"past": "dňom", "future": "deň", "zero": "{0} dní"},
         "days": {"past": "{0} dňami", "future": ["{0} dni", "{0} dní"]},
+        "week": {"past": "týždňom", "future": "týždeň", "zero": "{0} týždňov"},
+        "weeks": {"past": "{0} týždňami", "future": ["{0} týždne", "{0} týždňov"]},
         "month": {"past": "mesiacom", "future": "mesiac", "zero": "{0} mesiacov"},
         "months": {"past": "{0} mesiacmi", "future": ["{0} mesiace", "{0} mesiacov"]},
         "year": {"past": "rokom", "future": "rok", "zero": "{0} rokov"},
@@ -3109,6 +3113,7 @@ class HebrewLocale(Locale):
 
     past = "לפני {0}"
     future = "בעוד {0}"
+    and_word = "ו"
 
     timeframes = {
         "now": "הרגע",
@@ -3122,6 +3127,9 @@ class HebrewLocale(Locale):
         "day": "יום",
         "days": "{0} ימים",
         "2-days": "יומיים",
+        "week": "שבוע",
+        "weeks": "{0} שבועות",
+        "2-weeks": "שבועיים",
         "month": "חודש",
         "months": "{0} חודשים",
         "2-months": "חודשיים",
@@ -3174,10 +3182,41 @@ class HebrewLocale(Locale):
     def _format_timeframe(self, timeframe, delta):
         """Hebrew couple of <timeframe> aware"""
         couple = "2-{}".format(timeframe)
+        single = timeframe.rstrip("s")
         if abs(delta) == 2 and couple in self.timeframes:
-            return self.timeframes[couple].format(abs(delta))
+            key = couple
+        elif abs(delta) == 1 and single in self.timeframes:
+            key = single
         else:
-            return self.timeframes[timeframe].format(abs(delta))
+            key = timeframe
+
+        return self.timeframes[key].format(trunc(abs(delta)))
+
+    def describe_multi(self, timeframes, only_distance=False):
+        """ Describes a delta within multiple timeframes in plain language.
+        In Hebrew, the and word behaves a bit differently.
+
+        :param timeframes: a list of string, quantity pairs each representing a timeframe and delta.
+        :param only_distance: return only distance eg: "2 hours and 11 seconds" without "in" or "ago" keywords
+        """
+
+        humanized = ""
+        for index, (timeframe, delta) in enumerate(timeframes):
+            last_humanized = self._format_timeframe(timeframe, delta)
+            if index == 0:
+                humanized = last_humanized
+            elif index == len(timeframes) - 1:  # Must have at least 2 items
+                humanized += " " + self.and_word
+                if last_humanized[0].isdecimal():
+                    humanized += "־"
+                humanized += last_humanized
+            else:  # Don't add for the last one
+                humanized += ", " + last_humanized
+
+        if not only_distance:
+            humanized = self._format_relative(humanized, timeframe, delta)
+
+        return humanized
 
 
 class MarathiLocale(Locale):
@@ -4134,6 +4173,91 @@ class EstonianLocale(Locale):
         else:
             form = form["past"]
         return form.format(abs(delta))
+
+
+class SwahiliLocale(Locale):
+
+    names = [
+        "sw",
+        "sw_ke",
+        "sw_tz",
+    ]
+
+    past = "{0} iliyopita"
+    future = "muda wa {0}"
+    and_word = "na"
+
+    timeframes = {
+        "now": "sasa hivi",
+        "second": "sekunde",
+        "seconds": "sekunde {0}",
+        "minute": "dakika moja",
+        "minutes": "dakika {0}",
+        "hour": "saa moja",
+        "hours": "saa {0}",
+        "day": "siku moja",
+        "days": "siku {0}",
+        "week": "wiki moja",
+        "weeks": "wiki {0}",
+        "month": "mwezi moja",
+        "months": "miezi {0}",
+        "year": "mwaka moja",
+        "years": "miaka {0}",
+    }
+
+    meridians = {"am": "asu", "pm": "mch", "AM": "ASU", "PM": "MCH"}
+
+    month_names = [
+        "",
+        "Januari",
+        "Februari",
+        "Machi",
+        "Aprili",
+        "Mei",
+        "Juni",
+        "Julai",
+        "Agosti",
+        "Septemba",
+        "Oktoba",
+        "Novemba",
+        "Desemba",
+    ]
+    month_abbreviations = [
+        "",
+        "Jan",
+        "Feb",
+        "Mac",
+        "Apr",
+        "Mei",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Sep",
+        "Okt",
+        "Nov",
+        "Des",
+    ]
+
+    day_names = [
+        "",
+        "Jumatatu",
+        "Jumanne",
+        "Jumatano",
+        "Alhamisi",
+        "Ijumaa",
+        "Jumamosi",
+        "Jumapili",
+    ]
+    day_abbreviations = [
+        "",
+        "Jumatatu",
+        "Jumanne",
+        "Jumatano",
+        "Alhamisi",
+        "Ijumaa",
+        "Jumamosi",
+        "Jumapili",
+    ]
 
 
 _locales = _map_locales()

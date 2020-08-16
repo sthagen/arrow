@@ -39,11 +39,12 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
     ],
-    keywords="arrow date time datetime timestamp timezone",
+    keywords="arrow date time datetime timestamp timezone humanize",
     project_urls={
-        "Repository": "https://github.com/crsmithdev/arrow",
-        "Bug Reports": "https://github.com/crsmithdev/arrow/issues",
+        "Repository": "https://github.com/arrow-py/arrow",
+        "Bug Reports": "https://github.com/arrow-py/arrow/issues",
         "Documentation": "https://arrow.readthedocs.io",
     },
 )

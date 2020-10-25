@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import calendar
 import os
+import sys
 import time
 from datetime import datetime
 
@@ -659,28 +660,52 @@ class TestDateTimeParserParse:
             == expected
         )
 
+    def test_parse_ddd_and_dddd_ignore_case(self):
+        # Regression test for issue #851
+        expected = datetime(2019, 6, 24)
+        assert (
+            self.parser.parse("MONDAY, June 24, 2019", "dddd, MMMM DD, YYYY")
+            == expected
+        )
+
+    def test_parse_ddd_and_dddd_then_format(self):
         # Regression test for issue #446
         arw_formatter = formatter.DateTimeFormatter()
-        arw_formatter.format(self.parser.parse("Mon", "ddd"), "ddd") == "Mon"
-        arw_formatter.format(self.parser.parse("Monday", "dddd"), "dddd") == "Monday"
-        arw_formatter.format(self.parser.parse("Tue", "ddd"), "ddd") == "Tue"
-        arw_formatter.format(self.parser.parse("Tuesday", "dddd"), "dddd") == "Tuesday"
-        arw_formatter.format(self.parser.parse("Wed", "ddd"), "ddd") == "Wed"
-        arw_formatter.format(
-            self.parser.parse("Wednesday", "dddd"), "dddd"
-        ) == "Wednesday"
-        arw_formatter.format(self.parser.parse("Thu", "ddd"), "ddd") == "Thu"
-        arw_formatter.format(
-            self.parser.parse("Thursday", "dddd"), "dddd"
-        ) == "Thursday"
-        arw_formatter.format(self.parser.parse("Fri", "ddd"), "ddd") == "Fri"
-        arw_formatter.format(self.parser.parse("Friday", "dddd"), "dddd") == "Friday"
-        arw_formatter.format(self.parser.parse("Sat", "ddd"), "ddd") == "Sat"
-        arw_formatter.format(
-            self.parser.parse("Saturday", "dddd"), "dddd"
-        ) == "Saturday"
-        arw_formatter.format(self.parser.parse("Sun", "ddd"), "ddd") == "Sun"
-        arw_formatter.format(self.parser.parse("Sunday", "dddd"), "dddd") == "Sunday"
+        assert arw_formatter.format(self.parser.parse("Mon", "ddd"), "ddd") == "Mon"
+        assert (
+            arw_formatter.format(self.parser.parse("Monday", "dddd"), "dddd")
+            == "Monday"
+        )
+        assert arw_formatter.format(self.parser.parse("Tue", "ddd"), "ddd") == "Tue"
+        assert (
+            arw_formatter.format(self.parser.parse("Tuesday", "dddd"), "dddd")
+            == "Tuesday"
+        )
+        assert arw_formatter.format(self.parser.parse("Wed", "ddd"), "ddd") == "Wed"
+        assert (
+            arw_formatter.format(self.parser.parse("Wednesday", "dddd"), "dddd")
+            == "Wednesday"
+        )
+        assert arw_formatter.format(self.parser.parse("Thu", "ddd"), "ddd") == "Thu"
+        assert (
+            arw_formatter.format(self.parser.parse("Thursday", "dddd"), "dddd")
+            == "Thursday"
+        )
+        assert arw_formatter.format(self.parser.parse("Fri", "ddd"), "ddd") == "Fri"
+        assert (
+            arw_formatter.format(self.parser.parse("Friday", "dddd"), "dddd")
+            == "Friday"
+        )
+        assert arw_formatter.format(self.parser.parse("Sat", "ddd"), "ddd") == "Sat"
+        assert (
+            arw_formatter.format(self.parser.parse("Saturday", "dddd"), "dddd")
+            == "Saturday"
+        )
+        assert arw_formatter.format(self.parser.parse("Sun", "ddd"), "ddd") == "Sun"
+        assert (
+            arw_formatter.format(self.parser.parse("Sunday", "dddd"), "dddd")
+            == "Sunday"
+        )
 
     def test_parse_HH_24(self):
         assert self.parser.parse(
@@ -1631,3 +1656,23 @@ class TestDateTimeParserSearchDate:
         assert self.parser.parse(
             "Dec 31, 2017 |^${}().*+?<>-& 2:00 AM", format
         ) == datetime(2017, 12, 31, 2, 0)
+
+
+@pytest.mark.skipif(sys.version_info < (3, 5), reason="requires python3.5 or higher")
+@pytest.mark.usefixtures("dt_parser")
+class TestFuzzInput:
+    # Regression test for issue #860
+    def test_no_match_group(self):
+        fmt_str = str(b"[|\x1f\xb9\x03\x00\x00\x00\x00:-yI:][\x01yI:yI:I")
+        payload = str(b"")
+
+        with pytest.raises(parser.ParserMatchError):
+            self.parser.parse(payload, fmt_str)
+
+    # Regression test for issue #854
+    def test_regex_module_error(self):
+        fmt_str = str(b"struct n[X+,N-M)MMXdMM]<")
+        payload = str(b"")
+
+        with pytest.raises(parser.ParserMatchError):
+            self.parser.parse(payload, fmt_str)

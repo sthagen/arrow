@@ -7,6 +7,7 @@ import sys
 import time
 from datetime import date, datetime, timedelta
 
+import dateutil
 import pytest
 import pytz
 import simplejson as json
@@ -283,6 +284,15 @@ class TestArrowAttribute:
             self.arrow._datetime.utctimetuple()
         )
 
+        with pytest.warns(DeprecationWarning):
+            self.arrow.timestamp
+
+    def test_int_timestamp(self):
+
+        assert self.arrow.int_timestamp == calendar.timegm(
+            self.arrow._datetime.utctimetuple()
+        )
+
     def test_float_timestamp(self):
 
         result = self.arrow.float_timestamp - self.arrow.timestamp
@@ -309,6 +319,14 @@ class TestArrowAttribute:
         ambiguous_dt = arrow.Arrow(2017, 10, 29, 2, 0, tzinfo="Europe/Stockholm")
 
         assert ambiguous_dt.ambiguous
+
+    def test_getattr_imaginary(self):
+
+        assert not self.now.imaginary
+
+        imaginary_dt = arrow.Arrow(2013, 3, 31, 2, 30, tzinfo="Europe/Paris")
+
+        assert imaginary_dt.imaginary
 
 
 @pytest.mark.usefixtures("time_utcnow")
@@ -838,6 +856,82 @@ class TestArrowShift:
             2013, 5, 5, 12, 30, 45, 1
         )
 
+    def test_shift_positive_imaginary(self):
+
+        # Avoid shifting into imaginary datetimes, take into account DST and other timezone changes.
+
+        new_york = arrow.Arrow(2017, 3, 12, 1, 30, tzinfo="America/New_York")
+        assert new_york.shift(hours=+1) == arrow.Arrow(
+            2017, 3, 12, 3, 30, tzinfo="America/New_York"
+        )
+
+        # pendulum example
+        paris = arrow.Arrow(2013, 3, 31, 1, 50, tzinfo="Europe/Paris")
+        assert paris.shift(minutes=+20) == arrow.Arrow(
+            2013, 3, 31, 3, 10, tzinfo="Europe/Paris"
+        )
+
+        canberra = arrow.Arrow(2018, 10, 7, 1, 30, tzinfo="Australia/Canberra")
+        assert canberra.shift(hours=+1) == arrow.Arrow(
+            2018, 10, 7, 3, 30, tzinfo="Australia/Canberra"
+        )
+
+        kiev = arrow.Arrow(2018, 3, 25, 2, 30, tzinfo="Europe/Kiev")
+        assert kiev.shift(hours=+1) == arrow.Arrow(
+            2018, 3, 25, 4, 30, tzinfo="Europe/Kiev"
+        )
+
+        # Edge case, the entire day of 2011-12-30 is imaginary in this zone!
+        apia = arrow.Arrow(2011, 12, 29, 23, tzinfo="Pacific/Apia")
+        assert apia.shift(hours=+2) == arrow.Arrow(
+            2011, 12, 31, 1, tzinfo="Pacific/Apia"
+        )
+
+    def test_shift_negative_imaginary(self):
+
+        new_york = arrow.Arrow(2011, 3, 13, 3, 30, tzinfo="America/New_York")
+        assert new_york.shift(hours=-1) == arrow.Arrow(
+            2011, 3, 13, 3, 30, tzinfo="America/New_York"
+        )
+        assert new_york.shift(hours=-2) == arrow.Arrow(
+            2011, 3, 13, 1, 30, tzinfo="America/New_York"
+        )
+
+        london = arrow.Arrow(2019, 3, 31, 2, tzinfo="Europe/London")
+        assert london.shift(hours=-1) == arrow.Arrow(
+            2019, 3, 31, 2, tzinfo="Europe/London"
+        )
+        assert london.shift(hours=-2) == arrow.Arrow(
+            2019, 3, 31, 0, tzinfo="Europe/London"
+        )
+
+        # edge case, crossing the international dateline
+        apia = arrow.Arrow(2011, 12, 31, 1, tzinfo="Pacific/Apia")
+        assert apia.shift(hours=-2) == arrow.Arrow(
+            2011, 12, 31, 23, tzinfo="Pacific/Apia"
+        )
+
+    @pytest.mark.skipif(
+        dateutil.__version__ < "2.7.1", reason="old tz database (2018d needed)"
+    )
+    def test_shift_kiritimati(self):
+        # corrected 2018d tz database release, will fail in earlier versions
+
+        kiritimati = arrow.Arrow(1994, 12, 30, 12, 30, tzinfo="Pacific/Kiritimati")
+        assert kiritimati.shift(days=+1) == arrow.Arrow(
+            1995, 1, 1, 12, 30, tzinfo="Pacific/Kiritimati"
+        )
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 6), reason="unsupported before python 3.6"
+    )
+    def shift_imaginary_seconds(self):
+        # offset has a seconds component
+        monrovia = arrow.Arrow(1972, 1, 6, 23, tzinfo="Africa/Monrovia")
+        assert monrovia.shift(hours=+1, minutes=+30) == arrow.Arrow(
+            1972, 1, 7, 1, 14, 30, tzinfo="Africa/Monrovia"
+        )
+
 
 class TestArrowRange:
     def test_year(self):
@@ -1027,10 +1121,71 @@ class TestArrowRange:
         for r in result:
             assert r.tzinfo == tz.gettz("US/Central")
 
+    def test_imaginary(self):
+        # issue #72, avoid duplication in utc column
+
+        before = arrow.Arrow(2018, 3, 10, 23, tzinfo="US/Pacific")
+        after = arrow.Arrow(2018, 3, 11, 4, tzinfo="US/Pacific")
+
+        pacific_range = [t for t in arrow.Arrow.range("hour", before, after)]
+        utc_range = [t.to("utc") for t in arrow.Arrow.range("hour", before, after)]
+
+        assert len(pacific_range) == len(set(pacific_range))
+        assert len(utc_range) == len(set(utc_range))
+
     def test_unsupported(self):
 
         with pytest.raises(AttributeError):
             next(arrow.Arrow.range("abc", datetime.utcnow(), datetime.utcnow()))
+
+    def test_range_over_months_ending_on_different_days(self):
+        # regression test for issue #842
+        result = list(arrow.Arrow.range("month", datetime(2015, 1, 31), limit=4))
+        assert result == [
+            arrow.Arrow(2015, 1, 31),
+            arrow.Arrow(2015, 2, 28),
+            arrow.Arrow(2015, 3, 31),
+            arrow.Arrow(2015, 4, 30),
+        ]
+
+        result = list(arrow.Arrow.range("month", datetime(2015, 1, 30), limit=3))
+        assert result == [
+            arrow.Arrow(2015, 1, 30),
+            arrow.Arrow(2015, 2, 28),
+            arrow.Arrow(2015, 3, 30),
+        ]
+
+        result = list(arrow.Arrow.range("month", datetime(2015, 2, 28), limit=3))
+        assert result == [
+            arrow.Arrow(2015, 2, 28),
+            arrow.Arrow(2015, 3, 28),
+            arrow.Arrow(2015, 4, 28),
+        ]
+
+        result = list(arrow.Arrow.range("month", datetime(2015, 3, 31), limit=3))
+        assert result == [
+            arrow.Arrow(2015, 3, 31),
+            arrow.Arrow(2015, 4, 30),
+            arrow.Arrow(2015, 5, 31),
+        ]
+
+    def test_range_over_quarter_months_ending_on_different_days(self):
+        result = list(arrow.Arrow.range("quarter", datetime(2014, 11, 30), limit=3))
+        assert result == [
+            arrow.Arrow(2014, 11, 30),
+            arrow.Arrow(2015, 2, 28),
+            arrow.Arrow(2015, 5, 30),
+        ]
+
+    def test_range_over_year_maintains_end_date_across_leap_year(self):
+        result = list(arrow.Arrow.range("year", datetime(2012, 2, 29), limit=5))
+        assert result == [
+            arrow.Arrow(2012, 2, 29),
+            arrow.Arrow(2013, 2, 28),
+            arrow.Arrow(2014, 2, 28),
+            arrow.Arrow(2015, 2, 28),
+            arrow.Arrow(2016, 2, 29),
+        ]
 
 
 class TestArrowSpanRange:

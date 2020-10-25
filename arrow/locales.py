@@ -487,7 +487,7 @@ class FrenchBaseLocale(Locale):
     timeframes = {
         "now": "maintenant",
         "second": "une seconde",
-        "seconds": "{0} quelques secondes",
+        "seconds": "{0} secondes",
         "minute": "une minute",
         "minutes": "{0} minutes",
         "hour": "une heure",
@@ -656,11 +656,12 @@ class JapaneseLocale(Locale):
 
     past = "{0}前"
     future = "{0}後"
+    and_word = ""
 
     timeframes = {
         "now": "現在",
-        "second": "二番目の",
-        "seconds": "{0}数秒",
+        "second": "1秒",
+        "seconds": "{0}秒",
         "minute": "1分",
         "minutes": "{0}分",
         "hour": "1時間",
@@ -2075,6 +2076,8 @@ class TagalogLocale(Locale):
         "hours": "{0} oras",
         "day": "isang araw",
         "days": "{0} araw",
+        "week": "isang linggo",
+        "weeks": "{0} linggo",
         "month": "isang buwan",
         "months": "{0} buwan",
         "year": "isang taon",
@@ -2123,6 +2126,8 @@ class TagalogLocale(Locale):
         "Linggo",
     ]
     day_abbreviations = ["", "Lun", "Mar", "Miy", "Huw", "Biy", "Sab", "Lin"]
+
+    meridians = {"am": "nu", "pm": "nh", "AM": "ng umaga", "PM": "ng hapon"}
 
     def _ordinal_number(self, n):
         return "ika-{}".format(n)
@@ -3324,53 +3329,53 @@ class CatalanLocale(Locale):
 
     month_names = [
         "",
-        "Gener",
-        "Febrer",
-        "Març",
-        "Abril",
-        "Maig",
-        "Juny",
-        "Juliol",
-        "Agost",
-        "Setembre",
-        "Octubre",
-        "Novembre",
-        "Desembre",
+        "gener",
+        "febrer",
+        "març",
+        "abril",
+        "maig",
+        "juny",
+        "juliol",
+        "agost",
+        "setembre",
+        "octubre",
+        "novembre",
+        "desembre",
     ]
     month_abbreviations = [
         "",
-        "Gener",
-        "Febrer",
-        "Març",
-        "Abril",
-        "Maig",
-        "Juny",
-        "Juliol",
-        "Agost",
-        "Setembre",
-        "Octubre",
-        "Novembre",
-        "Desembre",
+        "gen.",
+        "febr.",
+        "març",
+        "abr.",
+        "maig",
+        "juny",
+        "jul.",
+        "ag.",
+        "set.",
+        "oct.",
+        "nov.",
+        "des.",
     ]
     day_names = [
         "",
-        "Dilluns",
-        "Dimarts",
-        "Dimecres",
-        "Dijous",
-        "Divendres",
-        "Dissabte",
-        "Diumenge",
+        "dilluns",
+        "dimarts",
+        "dimecres",
+        "dijous",
+        "divendres",
+        "dissabte",
+        "diumenge",
     ]
     day_abbreviations = [
         "",
-        "Dilluns",
-        "Dimarts",
-        "Dimecres",
-        "Dijous",
-        "Divendres",
-        "Dissabte",
-        "Diumenge",
+        "dl.",
+        "dt.",
+        "dc.",
+        "dj.",
+        "dv.",
+        "ds.",
+        "dg.",
     ]
 
 

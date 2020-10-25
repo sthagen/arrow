@@ -374,6 +374,8 @@ class Arrow(object):
         end = cls._get_datetime(end).replace(tzinfo=tzinfo)
 
         current = cls.fromdatetime(start)
+        original_day = start.day
+        day_is_clipped = False
         i = 0
 
         while current <= end and i < limit:
@@ -381,9 +383,15 @@ class Arrow(object):
             yield current
 
             values = [getattr(current, f) for f in cls._ATTRS]
-            current = cls(*values, tzinfo=tzinfo) + relativedelta(
+            current = cls(*values, tzinfo=tzinfo).shift(
                 **{frame_relative: relative_steps}
             )
+
+            if frame in ["month", "quarter", "year"] and current.day < original_day:
+                day_is_clipped = True
+
+            if day_is_clipped and not cls._is_last_day_of_month(current):
+                current = current.replace(day=original_day)
 
     def span(self, frame, count=1, bounds="[)"):
         """Returns two new :class:`Arrow <arrow.arrow.Arrow>` objects, representing the timespan
@@ -439,17 +447,17 @@ class Arrow(object):
         floor = self.__class__(*values, tzinfo=self.tzinfo)
 
         if frame_absolute == "week":
-            floor = floor + relativedelta(days=-(self.isoweekday() - 1))
+            floor = floor.shift(days=-(self.isoweekday() - 1))
         elif frame_absolute == "quarter":
-            floor = floor + relativedelta(months=-((self.month - 1) % 3))
+            floor = floor.shift(months=-((self.month - 1) % 3))
 
-        ceil = floor + relativedelta(**{frame_relative: count * relative_steps})
+        ceil = floor.shift(**{frame_relative: count * relative_steps})
 
         if bounds[0] == "(":
-            floor += relativedelta(microseconds=1)
+            floor = floor.shift(microseconds=+1)
 
         if bounds[1] == ")":
-            ceil += relativedelta(microseconds=-1)
+            ceil = ceil.shift(microseconds=-1)
 
         return floor, ceil
 
@@ -692,6 +700,26 @@ class Arrow(object):
 
         """
 
+        warnings.warn(
+            "For compatibility with the datetime.timestamp() method this property will be replaced with a method in "
+            "the 1.0.0 release, please switch to the .int_timestamp property for identical behaviour as soon as "
+            "possible.",
+            DeprecationWarning,
+        )
+        return calendar.timegm(self._datetime.utctimetuple())
+
+    @property
+    def int_timestamp(self):
+        """Returns a timestamp representation of the :class:`Arrow <arrow.arrow.Arrow>` object, in
+        UTC time.
+
+        Usage::
+
+            >>> arrow.utcnow().int_timestamp
+            1548260567
+
+        """
+
         return calendar.timegm(self._datetime.utctimetuple())
 
     @property
@@ -706,7 +734,11 @@ class Arrow(object):
 
         """
 
-        return self.timestamp + float(self.microsecond) / 1000000
+        # IDEA get rid of this in 1.0.0 and wrap datetime.timestamp()
+        # Or for compatibility retain this but make it call the timestamp method
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return self.timestamp + float(self.microsecond) / 1000000
 
     @property
     def fold(self):
@@ -718,11 +750,17 @@ class Arrow(object):
 
     @property
     def ambiguous(self):
-        """ Returns a boolean indicating whether the :class:`Arrow <arrow.arrow.Arrow>` object is ambiguous"""
+        """ Returns a boolean indicating whether the :class:`Arrow <arrow.arrow.Arrow>` object is ambiguous."""
 
         return dateutil_tz.datetime_ambiguous(self._datetime)
 
-    # mutation and duplication
+    @property
+    def imaginary(self):
+        """Indicates whether the :class: `Arrow <arrow.arrow.Arrow>` object exists in the current timezone."""
+
+        return not dateutil_tz.datetime_exists(self._datetime)
+
+    # mutation and duplication.
 
     def clone(self):
         """Returns a new :class:`Arrow <arrow.arrow.Arrow>` object, cloned from the current one.
@@ -835,6 +873,9 @@ class Arrow(object):
         )
 
         current = self._datetime + relativedelta(**relative_kwargs)
+
+        if not dateutil_tz.datetime_exists(current):
+            current = dateutil_tz.resolve_imaginary(current)
 
         return self.fromdatetime(current)
 
@@ -1533,6 +1574,10 @@ class Arrow(object):
             if limit is None:
                 return end, sys.maxsize
             return end, limit
+
+    @staticmethod
+    def _is_last_day_of_month(date):
+        return date.day == calendar.monthrange(date.year, date.month)[1]
 
 
 Arrow.min = Arrow.fromdatetime(datetime.min)

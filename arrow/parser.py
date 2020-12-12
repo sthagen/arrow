@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, unicode_literals
-
 import re
 from datetime import datetime, timedelta
+from functools import lru_cache
 
 from dateutil import tz
 
 from arrow import locales
-from arrow.util import iso_to_gregorian, next_weekday, normalize_timestamp
-
-try:
-    from functools import lru_cache
-except ImportError:  # pragma: no cover
-    from backports.functools_lru_cache import lru_cache  # pragma: no cover
+from arrow.util import next_weekday, normalize_timestamp
 
 
 class ParserError(ValueError):
@@ -28,7 +21,7 @@ class ParserMatchError(ParserError):
     pass
 
 
-class DateTimeParser(object):
+class DateTimeParser:
 
     _FORMAT_RE = re.compile(
         r"(YYY?Y?|MM?M?M?|Do|DD?D?D?|d?d?d?d|HH?|hh?|mm?|ss?|S+|ZZ?Z?|a|A|x|X|W)"
@@ -125,9 +118,8 @@ class DateTimeParser(object):
         num_spaces = datetime_string.count(" ")
         if has_space_divider and num_spaces != 1 or has_t_divider and num_spaces > 0:
             raise ParserError(
-                "Expected an ISO 8601-like string, but was given '{}'. Try passing in a format string to resolve this.".format(
-                    datetime_string
-                )
+                f"Expected an ISO 8601-like string, but was given '{datetime_string}'. "
+                "Try passing in a format string to resolve this."
             )
 
         has_time = has_space_divider or has_t_divider
@@ -168,7 +160,8 @@ class DateTimeParser(object):
 
             if time_components is None:
                 raise ParserError(
-                    "Invalid time component provided. Please specify a format or provide a valid time component in the basic or extended ISO 8601 time format."
+                    "Invalid time component provided. "
+                    "Please specify a format or provide a valid time component in the basic or extended ISO 8601 time format."
                 )
 
             (
@@ -200,19 +193,19 @@ class DateTimeParser(object):
             elif has_seconds:
                 time_string = "HH{time_sep}mm{time_sep}ss".format(time_sep=time_sep)
             elif has_minutes:
-                time_string = "HH{time_sep}mm".format(time_sep=time_sep)
+                time_string = f"HH{time_sep}mm"
             else:
                 time_string = "HH"
 
             if has_space_divider:
-                formats = ["{} {}".format(f, time_string) for f in formats]
+                formats = [f"{f} {time_string}" for f in formats]
             else:
-                formats = ["{}T{}".format(f, time_string) for f in formats]
+                formats = [f"{f}T{time_string}" for f in formats]
 
         if has_time and has_tz:
             # Add "Z" or "ZZ" to the format strings to indicate to
             # _parse_token() that a timezone needs to be parsed
-            formats = ["{}{}".format(f, tz_format) for f in formats]
+            formats = [f"{f}{tz_format}" for f in formats]
 
         return self._parse_multiformat(datetime_string, formats)
 
@@ -226,17 +219,16 @@ class DateTimeParser(object):
 
         try:
             fmt_tokens, fmt_pattern_re = self._generate_pattern_re(fmt)
-        # TODO: remove pragma when we drop 2.7
-        except re.error as e:  # pragma: no cover
+        except re.error as e:
             raise ParserMatchError(
-                "Failed to generate regular expression pattern: {}".format(e)
+                f"Failed to generate regular expression pattern: {e}."
             )
 
         match = fmt_pattern_re.search(datetime_string)
 
         if match is None:
             raise ParserMatchError(
-                "Failed to match '{}' when parsing '{}'".format(fmt, datetime_string)
+                f"Failed to match '{fmt}' when parsing '{datetime_string}'."
             )
 
         parts = {}
@@ -248,12 +240,9 @@ class DateTimeParser(object):
             else:
                 value = match.group(token)
 
-            # TODO: remove pragma when we drop 2.7
-            if value is None:  # pragma: no cover
+            if value is None:
                 raise ParserMatchError(
-                    "Unable to find a match group for the specified token '{}'.".format(
-                        token
-                    )
+                    f"Unable to find a match group for the specified token '{token}'."
                 )
 
             self._parse_token(token, value, parts)
@@ -288,8 +277,8 @@ class DateTimeParser(object):
             try:
                 input_re = self._input_re_map[token]
             except KeyError:
-                raise ParserError("Unrecognized token '{}'".format(token))
-            input_pattern = "(?P<{}>{})".format(token, input_re.pattern)
+                raise ParserError(f"Unrecognized token '{token}'.")
+            input_pattern = f"(?P<{token}>{input_re.pattern})"
             tokens.append(token)
             # a pattern doesn't have the same length as the token
             # it replaces! We keep the difference in the offset variable.
@@ -389,7 +378,7 @@ class DateTimeParser(object):
             # We have the *most significant* digits of an arbitrary-precision integer.
             # We want the six most significant digits as an integer, rounded.
             # IDEA: add nanosecond support somehow? Need datetime support for it first.
-            value = value.ljust(7, str("0"))
+            value = value.ljust(7, "0")
 
             # floating-point (IEEE-754) defaults to half-to-even rounding
             seventh_digit = int(value[6])
@@ -426,7 +415,7 @@ class DateTimeParser(object):
         weekdate = parts.get("weekdate")
 
         if weekdate is not None:
-            # we can use strptime (%G, %V, %u) in python 3.6 but these tokens aren't available before that
+
             year, week = int(weekdate[0]), int(weekdate[1])
 
             if weekdate[2] is not None:
@@ -435,7 +424,11 @@ class DateTimeParser(object):
                 # day not given, default to 1
                 day = 1
 
-            dt = iso_to_gregorian(year, week, day)
+            date_string = f"{year}-{week}-{day}"
+
+            #  tokens for ISO 8601 weekdates
+            dt = datetime.strptime(date_string, "%G-%V-%u")
+
             parts["year"] = dt.year
             parts["month"] = dt.month
             parts["day"] = dt.day
@@ -468,12 +461,12 @@ class DateTimeParser(object):
                     "Month component is not allowed with the DDD and DDDD tokens."
                 )
 
-            date_string = "{}-{}".format(year, day_of_year)
+            date_string = f"{year}-{day_of_year}"
             try:
                 dt = datetime.strptime(date_string, "%Y-%j")
             except ValueError:
                 raise ParserError(
-                    "The provided day of year '{}' is invalid.".format(day_of_year)
+                    f"The provided day of year '{day_of_year}' is invalid."
                 )
 
             parts["year"] = dt.year
@@ -557,10 +550,9 @@ class DateTimeParser(object):
                 pass
 
         if _datetime is None:
+            supported_formats = ", ".join(formats)
             raise ParserError(
-                "Could not match input '{}' to any of the following formats: {}".format(
-                    string, ", ".join(formats)
-                )
+                f"Could not match input '{string}' to any of the following formats: {supported_formats}."
             )
 
         return _datetime
@@ -571,7 +563,7 @@ class DateTimeParser(object):
         return re.compile(r"({})".format("|".join(choices)), flags=flags)
 
 
-class TzinfoParser(object):
+class TzinfoParser:
     _TZINFO_RE = re.compile(r"^([\+\-])?(\d{2})(?:\:?(\d{2}))?$")
 
     @classmethod
@@ -604,8 +596,6 @@ class TzinfoParser(object):
                 tzinfo = tz.gettz(tzinfo_string)
 
         if tzinfo is None:
-            raise ParserError(
-                'Could not parse timezone expression "{}"'.format(tzinfo_string)
-            )
+            raise ParserError(f"Could not parse timezone expression '{tzinfo_string}'.")
 
         return tzinfo

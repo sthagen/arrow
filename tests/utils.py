@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 import pytz
 from dateutil.zoneinfo import get_zonefile_instance
-
-from arrow import util
 
 
 def make_full_tz_list():
@@ -13,4 +10,4 @@ def make_full_tz_list():
 
 def assert_datetime_equality(dt1, dt2, within=10):
     assert dt1.tzinfo == dt2.tzinfo
-    assert abs(util.total_seconds(dt1 - dt2)) < within
+    assert abs((dt1 - dt2).total_seconds()) < within

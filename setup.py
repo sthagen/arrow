@@ -1,12 +1,12 @@
 # mypy: ignore-errors
+from pathlib import Path
+
 from setuptools import setup
 
-with open("README.rst", encoding="utf-8") as f:
-    readme = f.read()
-
+readme = Path("README.rst").read_text(encoding="utf-8")
+version = Path("arrow/_version.py").read_text(encoding="utf-8")
 about = {}
-with open("arrow/_version.py", encoding="utf-8") as f:
-    exec(f.read(), about)
+exec(version, about)
 
 setup(
     name="arrow",
@@ -23,7 +23,7 @@ setup(
     zip_safe=False,
     python_requires=">=3.6",
     install_requires=[
-        "python-dateutil>=2.7.0",
+        "python-dateutil>=2.8.2",
         "typing_extensions; python_version<'3.8'",
     ],
     classifiers=[
